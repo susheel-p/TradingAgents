@@ -32,6 +32,12 @@ dependencies = [
     "yfinance>=0.2.63",
 ]
 
+[project.optional-dependencies]
+dashboard = [
+    "streamlit>=1.35.0",
+    "plotly>=5.22.0",
+]
+
 [project.scripts]
 tradingagents = "cli.main:app"
 

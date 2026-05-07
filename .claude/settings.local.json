@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dir \"c:\\\\Users\\\\pamed\\\\Susheel\\\\TradingAgents\" /B)",
+      "Bash(dir \"c:\\\\Users\\\\pamed\\\\Susheel\\\\TradingAgents\\\\tradingagents\\\\agents\")",
+      "Bash(dir \"c:\\\\Users\\\\pamed\\\\Susheel\\\\TradingAgents\\\\tradingagents\\\\dataflows\")",
+      "Bash(dir \"c:\\\\Users\\\\pamed\\\\Susheel\\\\TradingAgents\\\\tradingagents\\\\agents\\\\managers\")",
+      "Bash(dir \"c:\\\\Users\\\\pamed\\\\Susheel\\\\TradingAgents\\\\tradingagents\\\\agents\\\\risk_mgmt\")",
+      "Bash(dir \"c:\\\\Users\\\\pamed\\\\Susheel\\\\TradingAgents\\\\tradingagents\\\\agents\\\\trader\")"
+    ]
+  }
+}

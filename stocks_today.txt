@@ -1,0 +1,11 @@
+# Daily stock analysis list - edit with your 10 stocks
+SPY
+QQQ
+AAPL
+MSFT
+GOOGL
+AMZN
+TSLA
+NVDA
+META
+NFLX

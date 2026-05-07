@@ -1,0 +1,64 @@
+{
+  "analysis_config": {
+    "llm_provider": "ollama",
+    "deep_think_llm": "qwen2.5-coder:7b",
+    "quick_think_llm": "qwen2.5-coder:7b",
+    "backend_url": "http://localhost:11434",
+    "max_debate_rounds": 1,
+    "max_risk_discuss_rounds": 1,
+    "output_language": "English",
+    "checkpoint_enabled": false
+  },
+  "stocks": [
+    {
+      "ticker": "AAPL",
+      "timeframe": "1y",
+      "risk_preference": "moderate"
+    },
+    {
+      "ticker": "MSFT",
+      "timeframe": "1y",
+      "risk_preference": "moderate"
+    },
+    {
+      "ticker": "GOOGL",
+      "timeframe": "1y",
+      "risk_preference": "moderate"
+    },
+    {
+      "ticker": "TSLA",
+      "timeframe": "6m",
+      "risk_preference": "aggressive"
+    },
+    {
+      "ticker": "NVDA",
+      "timeframe": "1y",
+      "risk_preference": "moderate"
+    },
+    {
+      "ticker": "META",
+      "timeframe": "1y",
+      "risk_preference": "moderate"
+    },
+    {
+      "ticker": "AMZN",
+      "timeframe": "1y",
+      "risk_preference": "conservative"
+    },
+    {
+      "ticker": "AMD",
+      "timeframe": "6m",
+      "risk_preference": "aggressive"
+    },
+    {
+      "ticker": "NFLX",
+      "timeframe": "1y",
+      "risk_preference": "moderate"
+    },
+    {
+      "ticker": "INTEL",
+      "timeframe": "1y",
+      "risk_preference": "conservative"
+    }
+  ]
+}
