@@ -729,7 +729,16 @@ def save_report_to_disk(final_state, ticker: str, save_path: Path):
     # Write consolidated report
     header = f"# Trading Analysis Report: {ticker}\n\nGenerated: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n"
     (save_path / "complete_report.md").write_text(header + "\n\n".join(sections), encoding="utf-8")
-    return save_path / "complete_report.md"
+    report_file = save_path / "complete_report.md"
+
+    # Upload to S3 if enabled
+    from tradingagents.storage import get_s3_storage
+    s3 = get_s3_storage()
+    if s3.enabled:
+        analysis_date = save_path.parent.name  # Get date from path structure
+        s3.upload_report_directory(save_path, ticker, analysis_date)
+
+    return report_file
 
 
 def display_complete_report(final_state):
@@ -1418,7 +1427,8 @@ def batch(
 
     # Setup S3 sync trap (for GPU instances that might crash)
     activity_db = DEFAULT_PRESET_DIR / "activity.db"
-    setup_sync_trap(FUNDAMENTALS_CACHE_FILE, activity_db)
+    reports_dir = Path(DEFAULT_CONFIG["results_dir"]) / "daily"
+    setup_sync_trap(FUNDAMENTALS_CACHE_FILE, activity_db, reports_dir)
     if os.getenv("TRADINGAGENTS_S3_BUCKET"):
         console.print(f"[dim]S3 sync enabled: {os.getenv('TRADINGAGENTS_S3_BUCKET')}[/dim]")
 
@@ -1517,6 +1527,59 @@ def batch(
     console.print(f"{'─' * 60}")
     console.print(f"[green]+ {sum(1 for r in results if '[OK]' in r['status'])}/{len(stocks)} completed[/green]")
     console.print(f"[dim]Time: {int(elapsed // 60):02d}:{int(elapsed % 60):02d} elapsed[/dim]\n")
+
+    # Upload activity.db to S3 if enabled
+    from tradingagents.storage import get_s3_storage
+    s3 = get_s3_storage()
+    if s3.enabled:
+        activity_db = DEFAULT_PRESET_DIR / "activity.db"
+        if activity_db.exists():
+            s3_key = s3.upload_activity_db(activity_db)
+            if s3_key:
+                console.print(f"[dim]Activity database synced to S3[/dim]")
+
+
+@app.command()
+def sync(
+    date: str = typer.Option(
+        None,
+        "--date",
+        help="Sync reports for specific date (YYYY-MM-DD). Default: all reports"
+    ),
+):
+    """Manually sync batch reports to S3.
+
+    Requires environment variables:
+    - TRADINGAGENTS_S3_BUCKET: S3 bucket name (e.g., lxlomjkanz)
+    - TRADINGAGENTS_S3_ENDPOINT: S3 endpoint URL (optional, for non-AWS providers)
+    - TRADINGAGENTS_S3_REGION: AWS region (default: us-east-1)
+
+    Example:
+    export TRADINGAGENTS_S3_BUCKET=lxlomjkanz
+    export TRADINGAGENTS_S3_ENDPOINT=https://s3api-us-il-1.runpod.io
+    export TRADINGAGENTS_S3_REGION=us-il-1
+    tradingagents sync
+    tradingagents sync --date 2026-05-07
+    """
+    from cli.preset import manual_sync_reports
+
+    if not os.getenv("TRADINGAGENTS_S3_BUCKET"):
+        console.print("[red]Error:[/red] TRADINGAGENTS_S3_BUCKET environment variable not set")
+        console.print("[dim]Example: export TRADINGAGENTS_S3_BUCKET=lxlomjkanz[/dim]")
+        raise typer.Exit(1)
+
+    console.print(f"[cyan]Syncing reports to S3...[/cyan]")
+    if date:
+        console.print(f"[dim]Date: {date}[/dim]")
+    else:
+        console.print(f"[dim]Syncing all reports[/dim]")
+
+    success = manual_sync_reports(date)
+    if success:
+        console.print(f"[green]✓ Sync completed successfully[/green]")
+    else:
+        console.print(f"[red]✗ Sync failed or no reports found[/red]")
+        raise typer.Exit(1)
 
 
 if __name__ == "__main__":

@@ -6,7 +6,9 @@
       "Bash(dir \"c:\\\\Users\\\\pamed\\\\Susheel\\\\TradingAgents\\\\tradingagents\\\\dataflows\")",
       "Bash(dir \"c:\\\\Users\\\\pamed\\\\Susheel\\\\TradingAgents\\\\tradingagents\\\\agents\\\\managers\")",
       "Bash(dir \"c:\\\\Users\\\\pamed\\\\Susheel\\\\TradingAgents\\\\tradingagents\\\\agents\\\\risk_mgmt\")",
-      "Bash(dir \"c:\\\\Users\\\\pamed\\\\Susheel\\\\TradingAgents\\\\tradingagents\\\\agents\\\\trader\")"
+      "Bash(dir \"c:\\\\Users\\\\pamed\\\\Susheel\\\\TradingAgents\\\\tradingagents\\\\agents\\\\trader\")",
+      "PowerShell(\\(Get-Content \"c:\\\\Users\\\\pamed\\\\Susheel\\\\TradingAgents\\\\cli\\\\main.py\" | Select-String -Pattern \"def batch\" -LineNumber\\).LineNumber)",
+      "Bash(python -c \"from cli.preset import manual_sync_reports, sync_to_s3; print\\('OK: S3 functions imported successfully'\\)\")"
     ]
   }
 }

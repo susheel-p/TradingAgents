@@ -139,9 +139,18 @@ NFLX
 def load_fundamentals_cache() -> Dict[str, str]:
     """Load fundamentals analysis cache (tracks when each stock was last analyzed).
 
+    Tries S3 first, falls back to local file.
+
     Returns:
         Dict mapping ticker -> last_analysis_date (YYYY-MM-DD)
     """
+    from tradingagents.storage import get_s3_storage
+
+    s3 = get_s3_storage()
+    if s3.enabled:
+        return s3.load_cache()
+
+    # Fallback to local file
     if not FUNDAMENTALS_CACHE_FILE.exists():
         return {}
 
@@ -150,7 +159,15 @@ def load_fundamentals_cache() -> Dict[str, str]:
 
 
 def save_fundamentals_cache(cache: Dict[str, str]) -> None:
-    """Save fundamentals analysis cache."""
+    """Save fundamentals analysis cache to S3 (preferred) or local file."""
+    from tradingagents.storage import get_s3_storage
+
+    s3 = get_s3_storage()
+    if s3.enabled:
+        s3.save_cache(cache)
+        return
+
+    # Fallback to local file
     FUNDAMENTALS_CACHE_FILE.parent.mkdir(parents=True, exist_ok=True)
     with open(FUNDAMENTALS_CACHE_FILE, "w", encoding="utf-8") as f:
         json.dump(cache, f, indent=2)
@@ -228,37 +245,51 @@ def update_fundamentals_cache(ticker: str, analysis_date: str = None) -> None:
     save_fundamentals_cache(cache)
 
 
-def sync_to_s3(cache_file: Path, activity_db: Path = None) -> None:
-    """Upload fundamentals cache and activity database to S3.
+def sync_to_s3(cache_file: Path, activity_db: Path = None, reports_dir: Path = None) -> None:
+    """Upload activity database to S3.
+
+    Note: Cache and reports are now uploaded directly via S3Storage class.
+    This function is a fallback for activity.db syncing on process exit.
 
     Args:
-        cache_file: Path to fundamentals_cache.json
-        activity_db: Path to activity.db (optional)
+        cache_file: Path to fundamentals_cache.json (kept for backward compatibility)
+        activity_db: Path to activity.db
+        reports_dir: Path to daily reports directory (deprecated, not used)
     """
-    s3_bucket = os.getenv("TRADINGAGENTS_S3_BUCKET")
-    if not s3_bucket:
+    from tradingagents.storage import get_s3_storage
+
+    s3 = get_s3_storage()
+    if not s3.enabled:
         return
 
-    files_to_sync = [cache_file]
-    if activity_db:
-        files_to_sync.append(activity_db)
-
-    for file_path in files_to_sync:
-        if not file_path.exists():
-            continue
-
-        try:
-            subprocess.run(
-                ["aws", "s3", "cp", str(file_path), f"s3://{s3_bucket}/"],
-                check=False,
-                capture_output=True,
-                timeout=30,
-            )
-        except (subprocess.TimeoutExpired, FileNotFoundError):
-            pass
+    # Upload activity.db as fallback on exit
+    if activity_db and activity_db.exists():
+        s3.upload_activity_db(activity_db)
 
 
-def setup_sync_trap(cache_file: Path = None, activity_db: Path = None) -> None:
+def manual_sync_reports(date: str = None) -> bool:
+    """Manually sync activity.db to S3 (reports are auto-synced after each analysis).
+
+    Args:
+        date: Date parameter (kept for backward compatibility, not used)
+
+    Returns:
+        True if sync was successful, False if S3 not configured or error
+    """
+    from tradingagents.storage import get_s3_storage
+
+    s3 = get_s3_storage()
+    if not s3.enabled:
+        return False
+
+    activity_db = DEFAULT_PRESET_DIR / "activity.db"
+    if not activity_db.exists():
+        return False
+
+    return s3.upload_activity_db(activity_db) is not None
+
+
+def setup_sync_trap(cache_file: Path = None, activity_db: Path = None, reports_dir: Path = None) -> None:
     """Register signal handlers to sync files to S3 on exit (for GPU instances).
 
     Syncs on: SIGTERM, SIGINT, normal exit. Requires TRADINGAGENTS_S3_BUCKET env var.
@@ -266,17 +297,20 @@ def setup_sync_trap(cache_file: Path = None, activity_db: Path = None) -> None:
     Args:
         cache_file: Path to fundamentals_cache.json (default: ~/.tradingagents/fundamentals_cache.json)
         activity_db: Path to activity.db (default: ~/.tradingagents/activity.db)
+        reports_dir: Path to daily reports directory (default: ~/.tradingagents/logs/daily)
     """
     if cache_file is None:
         cache_file = FUNDAMENTALS_CACHE_FILE
     if activity_db is None:
         activity_db = DEFAULT_PRESET_DIR / "activity.db"
+    if reports_dir is None:
+        reports_dir = DEFAULT_PRESET_DIR / "logs" / "daily"
 
     if not os.getenv("TRADINGAGENTS_S3_BUCKET"):
         return
 
     def on_exit(signum=None, frame=None):
-        sync_to_s3(cache_file, activity_db)
+        sync_to_s3(cache_file, activity_db, reports_dir)
 
     signal.signal(signal.SIGTERM, on_exit)
     signal.signal(signal.SIGINT, on_exit)
