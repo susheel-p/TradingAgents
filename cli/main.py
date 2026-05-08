@@ -1544,10 +1544,13 @@ def sync(
     date: str = typer.Option(
         None,
         "--date",
-        help="Sync reports for specific date (YYYY-MM-DD). Default: all reports"
+        help="Date parameter (kept for compatibility, not used)"
     ),
 ):
-    """Manually sync batch reports to S3.
+    """Manually sync activity database to S3.
+
+    Reports are auto-uploaded to S3 after each stock analysis.
+    This command uploads activity.db (run history, token usage, etc).
 
     Requires environment variables:
     - TRADINGAGENTS_S3_BUCKET: S3 bucket name (e.g., lxlomjkanz)
@@ -1559,7 +1562,6 @@ def sync(
     export TRADINGAGENTS_S3_ENDPOINT=https://s3api-us-il-1.runpod.io
     export TRADINGAGENTS_S3_REGION=us-il-1
     tradingagents sync
-    tradingagents sync --date 2026-05-07
     """
     from cli.preset import manual_sync_reports
 
